@@ -1,25 +1,44 @@
-# Ignore all matches and features directories in any dataset under data folder
-
-# Fountain-P11 dataset
-SFM/data/fountain-P11/matches/
-SFM/data/fountain-P11/features/
-
-# Entry-P10 dataset
-SFM/data/entry-P10/matches/
-SFM/data/entry-P10/features/
-
-# Herz-Jesu-P8 dataset
-SFM/data/Herz-Jesu-P8/matches/
-SFM/data/Herz-Jesu-P8/features/
-
-# Castle-P19 dataset
-SFM/data/castle-P19/matches/
-SFM/data/castle-P19/features/
-
-# Generic pattern to catch any other datasets
+# Ignore matches and features directories in any dataset
 SFM/data/*/matches/
 SFM/data/*/features/
 
-# Make sure all content within these directories is ignored
+# Generated files in datasets
 SFM/data/*/matches/**
 SFM/data/*/features/**
+
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Streamlit deployment temporary files
+.streamlit/
+.streamlit/**
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+.temp/
+.tmp/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+
+# Media and output files
+*.ply
+*.png
+*.jpg
+!SFM/data/*/images/*.jpg
+!assets/sample_outputs/*/*.png
+
+# System files
+.DS_Store
+Thumbs.db

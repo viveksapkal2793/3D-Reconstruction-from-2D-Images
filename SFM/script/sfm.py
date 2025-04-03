@@ -31,15 +31,26 @@ class SFM(object):
         self.images_dir = os.path.join(opts.data_dir,opts.dataset, 'images')
         self.feat_dir = os.path.join(opts.data_dir, opts.dataset, 'features', opts.features)
         self.matches_dir = os.path.join(opts.data_dir, opts.dataset, 'matches', opts.matcher)
-        self.out_cloud_dir = os.path.join(opts.out_dir, opts.dataset, 'point-clouds')
-        self.out_err_dir = os.path.join(opts.out_dir, opts.dataset, 'errors')
+        # self.out_cloud_dir = os.path.join(opts.out_dir, opts.dataset, 'point-clouds')
+        # self.out_err_dir = os.path.join(opts.out_dir, opts.dataset, 'errors')
 
-        #output directories
-        if not os.path.exists(self.out_cloud_dir): 
-            os.makedirs(self.out_cloud_dir)
+        # #output directories
+        # if not os.path.exists(self.out_cloud_dir): 
+        #     os.makedirs(self.out_cloud_dir)
 
-        if (opts.plot_error is True) and (not os.path.exists(self.out_err_dir)): 
-            os.makedirs(self.out_err_dir)
+        # if (opts.plot_error is True) and (not os.path.exists(self.out_err_dir)): 
+        #     os.makedirs(self.out_err_dir)
+
+        # Use custom output directories if provided, otherwise use defaults
+        if hasattr(opts, 'out_cloud_dir') and opts.out_cloud_dir:
+            self.out_cloud_dir = opts.out_cloud_dir
+        else:
+            self.out_cloud_dir = os.path.join(opts.out_dir, opts.dataset, 'point-clouds')
+            
+        if hasattr(opts, 'out_err_dir') and opts.out_err_dir:
+            self.out_err_dir = opts.out_err_dir
+        else:
+            self.out_err_dir = os.path.join(opts.out_dir, opts.dataset, 'errors')
 
         self.image_names = [x.split('.')[0] for x in sorted(os.listdir(self.images_dir)) \
                             if x.split('.')[-1] in opts.ext]
@@ -431,6 +442,12 @@ def SetArguments(parser):
 
     #misc
     parser.add_argument('--plot_error',action='store',type=bool,default=False,dest='plot_error')
+
+    # Add these arguments to the SetArguments function
+    parser.add_argument('--out_cloud_dir', action='store', type=str, default='', 
+                        dest='out_cloud_dir', help='custom directory to store point cloud results')
+    parser.add_argument('--out_err_dir', action='store', type=str, default='',
+                        dest='out_err_dir', help='custom directory to store error visualizations')
 
 def PostprocessArgs(opts): 
     opts.fund_method = getattr(cv2,opts.fund_method)

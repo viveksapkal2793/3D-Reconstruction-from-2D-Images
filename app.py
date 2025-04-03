@@ -1,13 +1,21 @@
 import streamlit as st
 import os
 import subprocess
+import sys
+
+# Try to import OpenCV
+try:
+    import cv2
+    st.sidebar.success("✅ OpenCV installed successfully")
+except ImportError:
+    st.sidebar.error("❌ OpenCV not found, certain functionality will not work")
+
 import time
 import base64
 from pathlib import Path
 import shutil
 import tempfile
 import logging
-import sys
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

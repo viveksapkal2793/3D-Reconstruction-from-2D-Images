@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import logging
+import sys
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

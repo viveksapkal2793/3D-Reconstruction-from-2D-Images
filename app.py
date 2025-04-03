@@ -41,6 +41,26 @@ def check_environment():
     env_status["temp_writable"] = os.access(TEMP_DIR, os.W_OK)
     return env_status
 
+def get_environment_info():
+    """Get information about the execution environment for debugging"""
+    info = {
+        "python_version": sys.version,
+        "current_directory": os.getcwd(),
+        "path_exists": {
+            "BASE_DIR": os.path.exists(BASE_DIR),
+            "SFM_DIR": os.path.exists(SFM_DIR),
+            "DATA_DIR": os.path.exists(DATA_DIR),
+            "TEMP_DIR": os.path.exists(TEMP_DIR),
+            "script_dir": os.path.exists(SFM_DIR / "script")
+        },
+        "directory_contents": {
+            "SFM/script": os.listdir(SFM_DIR / "script") if os.path.exists(SFM_DIR / "script") else "Not found",
+            "SFM/data": os.listdir(DATA_DIR) if os.path.exists(DATA_DIR) else "Not found"
+        }
+    }
+    return info
+
+
 def main():
     st.title("3D Reconstruction from 2D Images")
     
@@ -58,6 +78,10 @@ def main():
         "Select Approach",
         ["Structure from Motion (SFM)", "Other Approaches"]
     )
+
+    with st.sidebar.expander("Environment Info"):
+        env_info = get_environment_info()
+        st.json(env_info)
     
     if approach == "Structure from Motion (SFM)":
         render_sfm_page()

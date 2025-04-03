@@ -156,11 +156,13 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
     try:
         # Create dataset-specific directories
         dataset_dir = DATA_DIR / dataset
-        features_dir = dataset_dir / "features"
-        matches_dir = dataset_dir / "matches"
+        # features_dir = dataset_dir / "features"
+        # matches_dir = dataset_dir / "matches"
         
         # Create temp directories for this run
         dataset_results_dir = RESULTS_DIR / dataset
+        features_dir = dataset_results_dir / "features" / feature_type
+        matches_dir = dataset_results_dir / "matches" / matcher_type
         point_clouds_dir = dataset_results_dir / "point-clouds"
         errors_dir = dataset_results_dir / "errors"
         
@@ -187,7 +189,9 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
             f"--data_dir={str(image_dir)}",
             f"--out_dir={str(dataset_dir)}",
             f"--features={feature_type}",
-            f"--matcher={matcher_type}"
+            f"--matcher={matcher_type}",
+            f"--feat_out_dir={str(features_dir)}",
+            f"--matches_out_dir={str(matches_dir)}"
         ]
         
         logger.info(f"Running feature matching command: {' '.join(featmatch_cmd)}")

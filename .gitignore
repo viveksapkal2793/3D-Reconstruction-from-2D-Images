@@ -36,9 +36,18 @@ ENV/
 *.ply
 *.png
 *.jpg
+SFM/data/*/images/
 !SFM/data/*/images/*.jpg
+!SFM/data/*/images/*.png
 !assets/sample_outputs/*/*.png
 
 # System files
 .DS_Store
 Thumbs.db
+
+# Custom and temporary output directories
+**/temp/
+**/tmp/
+**/results/
+**/point-clouds/
+**/errors/

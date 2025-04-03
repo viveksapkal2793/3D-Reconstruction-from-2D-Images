@@ -1,7 +1,11 @@
 import numpy as np 
 import cv2 
+import os
 import pdb
 # from itertools import izip 
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def SerializeKeypoints(kp): 
     """Serialize list of keypoint objects so it can be saved using pickle
@@ -106,26 +110,33 @@ def GetAlignedMatches(kp1,desc1,kp2,desc2,matches):
 def pts2ply(pts,colors,filename='out.ply'): 
     """Saves an ndarray of 3D coordinates (in meshlab format)"""
 
-    with open(filename,'w') as f: 
-        f.write('ply\n')
-        f.write('format ascii 1.0\n')
-        f.write('element vertex {}\n'.format(pts.shape[0]))
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
         
-        f.write('property float x\n')
-        f.write('property float y\n')
-        f.write('property float z\n')
-        
-        f.write('property uchar red\n')
-        f.write('property uchar green\n')
-        f.write('property uchar blue\n')
-        
-        f.write('end_header\n')
-        
-        #pdb.set_trace()
-        colors = colors.astype(int)
-        for pt, cl in zip(pts,colors): 
-            f.write('{} {} {} {} {} {}\n'.format(pt[0],pt[1],pt[2],
-                                                cl[0],cl[1],cl[2]))
+        with open(filename,'w') as f: 
+            f.write('ply\n')
+            f.write('format ascii 1.0\n')
+            f.write('element vertex {}\n'.format(pts.shape[0]))
+            
+            f.write('property float x\n')
+            f.write('property float y\n')
+            f.write('property float z\n')
+            
+            f.write('property uchar red\n')
+            f.write('property uchar green\n')
+            f.write('property uchar blue\n')
+            
+            f.write('end_header\n')
+            
+            #pdb.set_trace()
+            colors = colors.astype(int)
+            for pt, cl in zip(pts,colors): 
+                f.write('{} {} {} {} {} {}\n'.format(pt[0],pt[1],pt[2],
+                                                    cl[0],cl[1],cl[2]))
+    except Exception as e:
+        logger.error(f"Error writing PLY file: {e}")
+        raise
 
 def DrawCorrespondences(img, ptsTrue, ptsReproj, ax, drawOnly=50): 
     """

@@ -18,9 +18,20 @@ def FeatMatch(opts, data_files=[]):
         img_paths = data_files
         img_names = sorted([x.split('/')[-1] for x in data_files])
         
-    feat_out_dir = os.path.join(opts.out_dir,'features',opts.features)
-    matches_out_dir = os.path.join(opts.out_dir,'matches',opts.matcher)
+    # feat_out_dir = os.path.join(opts.out_dir,'features',opts.features)
+    # matches_out_dir = os.path.join(opts.out_dir,'matches',opts.matcher)
 
+    # Use custom output directories if provided, otherwise use defaults
+    if hasattr(opts, 'feat_out_dir') and opts.feat_out_dir:
+        feat_out_dir = opts.feat_out_dir
+    else:
+        feat_out_dir = os.path.join(opts.out_dir, 'features', opts.features)
+        
+    if hasattr(opts, 'matches_out_dir') and opts.matches_out_dir:
+        matches_out_dir = opts.matches_out_dir
+    else:
+        matches_out_dir = os.path.join(opts.out_dir, 'matches', opts.matcher)
+        
     if not os.path.exists(feat_out_dir): 
         os.makedirs(feat_out_dir)
     if not os.path.exists(matches_out_dir): 
@@ -130,6 +141,12 @@ def SetArguments(parser):
     parser.add_argument('--save_results',action='store', type=str, default=False, 
                         dest='save_results',help='[True|False] whether to save images with\
                         keypoints drawn on them (default: False)')  
+    
+        # Add new parameters for custom output directories
+    parser.add_argument('--feat_out_dir', action='store', type=str, default='', 
+                        dest='feat_out_dir', help='custom directory to store feature results')
+    parser.add_argument('--matches_out_dir', action='store', type=str, default='',
+                        dest='matches_out_dir', help='custom directory to store matches results')
 
 def PostprocessArgs(opts): 
     opts.ext = [x for x in opts.ext.split(',')]

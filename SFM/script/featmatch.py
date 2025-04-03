@@ -1,8 +1,27 @@
-import cv2 
+import sys
+import os
+
+# Check for OpenCV and print debugging info
+try:
+    import cv2
+    print(f"OpenCV version: {cv2.__version__}")
+except ImportError as e:
+    print(f"Error importing OpenCV: {e}")
+    print(f"Python path: {sys.path}")
+    print(f"Current directory: {os.getcwd()}")
+    # Try to provide more information about the environment
+    print("Installed packages:")
+    try:
+        import pkg_resources
+        for pkg in pkg_resources.working_set:
+            print(f"  {pkg.key} {pkg.version}")
+    except:
+        print("Could not list installed packages")
+    sys.exit(1)
+
 import numpy as np 
 import pickle 
 import argparse
-import os 
 from time import time
 
 from utils import * 
@@ -31,7 +50,7 @@ def FeatMatch(opts, data_files=[]):
         matches_out_dir = opts.matches_out_dir
     else:
         matches_out_dir = os.path.join(opts.out_dir, 'matches', opts.matcher)
-        
+
     if not os.path.exists(feat_out_dir): 
         os.makedirs(feat_out_dir)
     if not os.path.exists(matches_out_dir): 

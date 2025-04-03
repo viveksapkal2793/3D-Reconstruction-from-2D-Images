@@ -1,5 +1,7 @@
 streamlit>=1.27.0
 numpy>=1.26.0
-opencv-python-headless>=4.8.0
+# Use only ONE of these opencv packages to avoid conflicts
 opencv-contrib-python-headless>=4.8.0
+# Remove this line to avoid conflicts
+# opencv-python-headless>=4.8.0
 matplotlib>=3.7.0

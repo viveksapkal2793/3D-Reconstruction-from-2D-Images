@@ -1,0 +1,12 @@
+name: sfm-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - streamlit=1.31.0
+  - numpy=1.26.0
+  - opencv=4.8.0
+  - matplotlib=3.8.0
+  - pip:
+    - opencv-contrib-python==4.8.0.76

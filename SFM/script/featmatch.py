@@ -63,21 +63,36 @@ def FeatMatch(opts, data_files=[]):
         img_name = img_names[i].split('.')[0]
         img = img[:,:,::-1]
 
-        # feat = getattr(cv2.xfeatures2d, '{}_create'.format(opts.features))()
-        # kp, desc = feat.detectAndCompute(img,None)
+        # # Modified feature detection code with fallback
+        # try:
+        #     if opts.features in ['SURF', 'SIFT']:
+        #         feat = getattr(cv2.xfeatures2d, '{}_create'.format(opts.features))()
+        #     else:
+        #         # For free algorithms like ORB, BRISK, etc.
+        #         feat = getattr(cv2, '{}_{}'.format(opts.features, 'create'))()
+        #     kp, desc = feat.detectAndCompute(img,None)
+        # except (AttributeError, cv2.error):
+        #     print(f"Warning: {opts.features} not available, falling back to ORB")
+        #     feat = cv2.ORB_create()
+        #     kp, desc = feat.detectAndCompute(img,None)
 
-        # Modified feature detection code with fallback
         try:
             if opts.features in ['SURF', 'SIFT']:
-                feat = getattr(cv2.xfeatures2d, '{}_create'.format(opts.features))()
+                # Try multiple ways to initialize the feature detector
+                try:
+                    # First try xfeatures2d
+                    feat = getattr(cv2.xfeatures2d, '{}_create'.format(opts.features))()
+                except (AttributeError, cv2.error):
+                    # Then try direct creation (OpenCV 4.x)
+                    feat = getattr(cv2, opts.features + '_create')()
             else:
-                # For free algorithms like ORB, BRISK, etc.
+                # For algorithms like ORB, BRISK, etc.
                 feat = getattr(cv2, '{}_{}'.format(opts.features, 'create'))()
-            kp, desc = feat.detectAndCompute(img,None)
-        except (AttributeError, cv2.error):
-            print(f"Warning: {opts.features} not available, falling back to ORB")
+            kp, desc = feat.detectAndCompute(img, None)
+        except Exception as e:
+            print(f"Error with {opts.features}, falling back to ORB: {str(e)}")
             feat = cv2.ORB_create()
-            kp, desc = feat.detectAndCompute(img,None)
+            kp, desc = feat.detectAndCompute(img, None)
 
         data.append((img_name, kp, desc))
 

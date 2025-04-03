@@ -1,7 +1,9 @@
-streamlit>=1.27.0
-numpy>=1.26.0
-# Use only ONE of these opencv packages to avoid conflicts
-opencv-contrib-python-headless>=4.8.0
-# Remove this line to avoid conflicts
-# opencv-python-headless>=4.8.0
-matplotlib>=3.7.0
+# Basic requirements
+streamlit==1.31.0
+numpy==1.26.0
+
+# OpenCV - specify exact version that's known to work with Python 3.12
+opencv-contrib-python==4.8.0.76
+
+# Other dependencies
+matplotlib==3.8.0

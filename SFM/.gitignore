@@ -1,5 +1,5 @@
-SFM/data/fountain-P11/matches/
-SFM/data/fountain-P11/features/**
+SFM\data\fountain-P11\matches\**
+SFM\data\fountain-P11\features\**
 
 SFM/data/castle-P19/matches/
 SFM/data/castle-P19/features/ORB/

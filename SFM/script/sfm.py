@@ -29,10 +29,22 @@ class SFM(object):
 
         #setting up directory stuff..
         self.images_dir = os.path.join(opts.data_dir,opts.dataset, 'images')
-        self.feat_dir = os.path.join(opts.data_dir, opts.dataset, 'features', opts.features)
-        self.matches_dir = os.path.join(opts.data_dir, opts.dataset, 'matches', opts.matcher)
+        # self.feat_dir = os.path.join(opts.data_dir, opts.dataset, 'features', opts.features)
+        # self.matches_dir = os.path.join(opts.data_dir, opts.dataset, 'matches', opts.matcher)
         # self.out_cloud_dir = os.path.join(opts.out_dir, opts.dataset, 'point-clouds')
         # self.out_err_dir = os.path.join(opts.out_dir, opts.dataset, 'errors')
+
+        # Use custom feature directory if provided
+        if hasattr(opts, 'feat_in_dir') and opts.feat_in_dir:
+            self.feat_dir = opts.feat_in_dir
+        else:
+            self.feat_dir = os.path.join(opts.data_dir, opts.dataset, 'features', opts.features)
+        
+        # Use custom matches directory if provided
+        if hasattr(opts, 'matches_in_dir') and opts.matches_in_dir:
+            self.matches_dir = opts.matches_in_dir
+        else:
+            self.matches_dir = os.path.join(opts.data_dir, opts.dataset, 'matches', opts.matcher)
 
         # #output directories
         # if not os.path.exists(self.out_cloud_dir): 
@@ -448,6 +460,11 @@ def SetArguments(parser):
                         dest='out_cloud_dir', help='custom directory to store point cloud results')
     parser.add_argument('--out_err_dir', action='store', type=str, default='',
                         dest='out_err_dir', help='custom directory to store error visualizations')
+
+    parser.add_argument('--feat_in_dir', action='store', type=str, default='', 
+                        dest='feat_in_dir', help='custom directory to read feature files from')
+    parser.add_argument('--matches_in_dir', action='store', type=str, default='',
+                        dest='matches_in_dir', help='custom directory to read matches files from')
 
 def PostprocessArgs(opts): 
     opts.fund_method = getattr(cv2,opts.fund_method)

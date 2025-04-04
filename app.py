@@ -8,7 +8,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import logging
-
+IS_DEPLOYMENT = os.getenv('STREAMLIT_SHARING', '') or os.getenv('STREAMLIT_CLOUD', '')
 # Set page config
 st.set_page_config(
     page_title="3D Reconstruction from 2D Images",
@@ -168,10 +168,17 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
         # features_dir = dataset_dir / "features"
         # matches_dir = dataset_dir / "matches"
         
-        # Create temp directories for this run
-        dataset_results_dir = RESULTS_DIR / dataset
-        features_dir = dataset_results_dir / "features" / feature_type
-        matches_dir = dataset_results_dir / "matches" / matcher_type
+        # Use different strategies for local vs deployment
+        if IS_DEPLOYMENT:
+            # In deployment: use temp directories
+            dataset_results_dir = RESULTS_DIR / dataset
+            features_dir = dataset_results_dir / "features" / feature_type
+            matches_dir = dataset_results_dir / "matches" / matcher_type
+        else:
+            # Local: use standard directories in the repository
+            features_dir = dataset_dir / "features" / feature_type
+            matches_dir = dataset_dir / "matches" / matcher_type
+        
         point_clouds_dir = dataset_results_dir / "point-clouds"
         errors_dir = dataset_results_dir / "errors"
         
@@ -229,6 +236,8 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
             f"--features={feature_type}",
             f"--matcher={matcher_type}",
             f"--plot_error=True",
+            f"--feat_in_dir={str(features_dir)}",         # Add this line
+            f"--matches_in_dir={str(matches_dir)}", 
             f"--out_cloud_dir={str(point_clouds_dir)}",  # Ensure your sfm.py accepts this parameter
             f"--out_err_dir={str(errors_dir)}"           # Ensure your sfm.py accepts this parameter
         ]

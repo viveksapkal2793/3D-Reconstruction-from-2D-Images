@@ -28,6 +28,7 @@ def run_app():
         import streamlit as st
         # Import and run the actual app
         import app
+        app.main()
     else:
         print("ERROR: Failed to install OpenCV. Application cannot run.")
         sys.exit(1)

@@ -2,24 +2,12 @@ import streamlit as st
 import os
 import subprocess
 import sys
-
-# Try to import OpenCV
-try:
-    import cv2
-    st.sidebar.success("✅ OpenCV installed successfully")
-except ImportError:
-    st.sidebar.error("❌ OpenCV not found, certain functionality will not work")
-
 import time
 import base64
 from pathlib import Path
 import shutil
 import tempfile
 import logging
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Set page config
 st.set_page_config(
@@ -28,6 +16,18 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Try to import OpenCV
+try:
+    import cv2
+    st.sidebar.success("✅ OpenCV installed successfully")
+except ImportError:
+    st.sidebar.error("❌ OpenCV not found, certain functionality will not work")
+
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Define paths
 BASE_DIR = Path(__file__).parent.resolve()

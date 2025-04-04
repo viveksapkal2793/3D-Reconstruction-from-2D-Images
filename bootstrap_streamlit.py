@@ -25,6 +25,7 @@ def install_opencv():
 def run_app():
     # Install OpenCV if needed
     if install_opencv():
+        import streamlit as st
         # Import and run the actual app
         import app
     else:

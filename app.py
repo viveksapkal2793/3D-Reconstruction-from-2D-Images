@@ -222,7 +222,7 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
         # Step 2: Run SFM
         status_text.text("Step 2/2: Performing 3D reconstruction...")
         sfm_cmd = [
-            "python", 
+            sys.executable, 
             str(SFM_DIR / "script" / "sfm.py"),
             f"--data_dir={str(DATA_DIR)}",
             f"--dataset={dataset}",
@@ -234,7 +234,7 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
         ]
         
         logger.info(f"Running SFM command: {' '.join(sfm_cmd)}")
-        result = subprocess.run(sfm_cmd, capture_output=True, text=True)
+        result = subprocess.run(sfm_cmd, capture_output=True, text=True, env=env)
         if result.returncode != 0:
             st.error(f"SFM reconstruction failed: {result.stderr}")
             logger.error(f"SFM stderr: {result.stderr}")

@@ -154,8 +154,8 @@ def render_sfm_page():
     # Configuration options
     st.subheader("Configuration")
     with st.expander("Advanced Settings"):
-        feature_type = st.selectbox("Feature Detector", ["ORB", "SIFT", "SURF"], index=0)
-        matcher_type = st.selectbox("Feature Matcher", ["BFMatcher", "FlannBasedMatcher"], index=0)
+        feature_type = st.selectbox("Feature Detector", ["ORB", "SIFT"], index=0)
+        matcher_type = st.selectbox("Feature Matcher", ["BFMatcher"], index=0)
         
     # Process button
     if st.button("Run Reconstruction", type="primary"):

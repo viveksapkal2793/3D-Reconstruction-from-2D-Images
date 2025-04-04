@@ -165,6 +165,9 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
     try:
         # Create dataset-specific directories
         dataset_dir = DATA_DIR / dataset
+        # Always define dataset_results_dir (this was missing)
+        dataset_results_dir = RESULTS_DIR / dataset
+        
         # features_dir = dataset_dir / "features"
         # matches_dir = dataset_dir / "matches"
         

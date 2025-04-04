@@ -190,10 +190,16 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
             st.error(f"Dataset '{dataset}' not found. The app requires datasets to be available at {image_dir}")
             return
         
+        # Get current environment
+        env = os.environ.copy()
+        
+        # Add the site-packages directory to PYTHONPATH for the subprocess
+        env['PYTHONPATH'] = os.path.dirname(os.__file__) + '/site-packages:' + env.get('PYTHONPATH', '')
+
         # Step 1: Run feature matching
         status_text.text("Step 1/2: Extracting and matching features...")
         featmatch_cmd = [
-            "python", 
+            sys.executable, 
             str(SFM_DIR / "script" / "featmatch.py"),
             f"--data_dir={str(image_dir)}",
             f"--out_dir={str(dataset_dir)}",
@@ -204,7 +210,7 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
         ]
         
         logger.info(f"Running feature matching command: {' '.join(featmatch_cmd)}")
-        result = subprocess.run(featmatch_cmd, capture_output=True, text=True)
+        result = subprocess.run(featmatch_cmd, capture_output=True, text=True, env=env)
         if result.returncode != 0:
             st.error(f"Feature matching failed: {result.stderr}")
             logger.error(f"Feature matching stderr: {result.stderr}")

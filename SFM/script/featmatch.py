@@ -1,6 +1,11 @@
 import sys
 import os
 
+# Try to ensure OpenCV is in the path 
+site_packages = os.path.join(os.path.dirname(os.__file__), 'site-packages')
+if site_packages not in sys.path:
+    sys.path.append(site_packages)
+
 # Check for OpenCV and print debugging info
 try:
     import cv2
@@ -9,15 +14,16 @@ except ImportError as e:
     print(f"Error importing OpenCV: {e}")
     print(f"Python path: {sys.path}")
     print(f"Current directory: {os.getcwd()}")
-    # Try to provide more information about the environment
-    print("Installed packages:")
+    # Try a last-resort pip install
     try:
-        import pkg_resources
-        for pkg in pkg_resources.working_set:
-            print(f"  {pkg.key} {pkg.version}")
-    except:
-        print("Could not list installed packages")
-    sys.exit(1)
+        print("Attempting to install OpenCV...")
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-contrib-python-headless==4.8.0.76"])
+        import cv2
+        print(f"Successfully installed OpenCV: {cv2.__version__}")
+    except Exception as install_error:
+        print(f"Failed to install OpenCV: {install_error}")
+        sys.exit(1)
 
 import numpy as np 
 import pickle 

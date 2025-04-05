@@ -11,6 +11,8 @@ import logging
 import uuid
 from PIL import Image
 import numpy as np
+import plotly.graph_objects as go
+from plyfile import PlyData
 IS_DEPLOYMENT = os.getenv('STREAMLIT_SHARING', '') or os.getenv('STREAMLIT_CLOUD', '')
 # Set page config
 st.set_page_config(
@@ -72,6 +74,78 @@ def get_environment_info():
     }
     return info
 
+def load_ply_file(file_path):
+    """Load PLY file and extract points and colors"""
+    try:
+        plydata = PlyData.read(file_path)
+        vertices = plydata['vertex']
+        
+        # Extract coordinates
+        x = vertices['x']
+        y = vertices['y']
+        z = vertices['z']
+        
+        # Extract colors if available, otherwise use default
+        if 'red' in vertices:
+            r = vertices['red']
+            g = vertices['green']
+            b = vertices['blue']
+            has_colors = True
+        else:
+            # Generate a default color (white)
+            r = np.ones_like(x) * 255
+            g = np.ones_like(x) * 255
+            b = np.ones_like(x) * 255
+            has_colors = False
+        
+        return x, y, z, r, g, b, has_colors
+    except Exception as e:
+        logger.error(f"Error loading PLY file: {e}")
+        raise
+
+def create_3d_point_cloud_plot(x, y, z, r, g, b, subsample=1.0):
+    """Create a 3D scatter plot from point cloud data"""
+    # Subsample points if needed (for better performance)
+    if subsample < 1.0:
+        total_points = len(x)
+        sample_size = int(total_points * subsample)
+        indices = np.random.choice(total_points, size=sample_size, replace=False)
+        x = x[indices]
+        y = y[indices]
+        z = z[indices]
+        r = r[indices]
+        g = g[indices]
+        b = b[indices]
+    
+    # Create color strings for plotly
+    colors = [f'rgb({int(r[i])},{int(g[i])},{int(b[i])})' for i in range(len(x))]
+    
+    # Create the scatter plot
+    fig = go.Figure(data=[
+        go.Scatter3d(
+            x=x, y=y, z=z,
+            mode='markers',
+            marker=dict(
+                size=2,
+                color=colors,
+                opacity=0.8
+            )
+        )
+    ])
+    
+    # Set layout options
+    fig.update_layout(
+        scene=dict(
+            xaxis_title='X',
+            yaxis_title='Y',
+            zaxis_title='Z',
+            aspectmode='data'  # preserve the data aspect ratio
+        ),
+        margin=dict(l=0, r=0, b=0, t=30),
+        title="3D Point Cloud"
+    )
+    
+    return fig
 
 def main():
     st.title("3D Reconstruction from 2D Images")
@@ -407,6 +481,40 @@ def display_results(dataset):
     final_cloud = cloud_files[-1]
     st.success(f"Successfully generated point cloud with {len(cloud_files)} views")
     
+    # NEW CODE: Add 3D visualization of the point cloud
+    st.subheader("3D Visualization")
+    try:
+        # Add controls for visualization
+        with st.expander("Visualization Settings", expanded=True):
+            subsample_ratio = st.slider(
+                "Point Density", 
+                min_value=0.01, 
+                max_value=1.0, 
+                value=0.5 if os.path.getsize(final_cloud) > 10e6 else 1.0,  # Subsample large clouds
+                step=0.01,
+                help="Reduce this value to improve performance for large point clouds"
+            )
+            
+            point_size = st.slider("Point Size", 1, 5, 2)
+        
+        # Load and display the point cloud
+        with st.spinner("Loading 3D point cloud..."):
+            x, y, z, r, g, b, has_colors = load_ply_file(final_cloud)
+            
+            if not has_colors:
+                st.info("This point cloud doesn't contain color information. Displaying with default colors.")
+            
+            fig = create_3d_point_cloud_plot(x, y, z, r, g, b, subsample=subsample_ratio)
+            
+            # Update point size based on user selection
+            fig.update_traces(marker=dict(size=point_size))
+            
+            st.plotly_chart(fig, use_container_width=True)
+            st.info("💡 Tip: You can rotate, zoom, and pan the 3D view using your mouse")
+    except Exception as e:
+        st.error(f"Error creating 3D visualization: {str(e)}")
+        st.info("You can still download the PLY file and view it in an external viewer.")
+        
     # Display reprojection errors only if they exist
     error_dir = RESULTS_DIR / dataset / "errors"
     if error_dir.exists():

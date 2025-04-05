@@ -27,13 +27,9 @@ class SFM(object):
         self.opts = opts
         self.point_cloud = np.zeros((0,3))
 
-        #setting up directory stuff..
-        self.images_dir = os.path.join(opts.data_dir,opts.dataset, 'images')
-        # self.feat_dir = os.path.join(opts.data_dir, opts.dataset, 'features', opts.features)
-        # self.matches_dir = os.path.join(opts.data_dir, opts.dataset, 'matches', opts.matcher)
-        # self.out_cloud_dir = os.path.join(opts.out_dir, opts.dataset, 'point-clouds')
-        # self.out_err_dir = os.path.join(opts.out_dir, opts.dataset, 'errors')
-
+        # setting up directory stuff..
+        self.images_dir = os.path.join(opts.data_dir, opts.dataset, 'images')
+        
         # Use custom feature directory if provided
         if hasattr(opts, 'feat_in_dir') and opts.feat_in_dir:
             self.feat_dir = opts.feat_in_dir
@@ -46,14 +42,7 @@ class SFM(object):
         else:
             self.matches_dir = os.path.join(opts.data_dir, opts.dataset, 'matches', opts.matcher)
 
-        # #output directories
-        # if not os.path.exists(self.out_cloud_dir): 
-        #     os.makedirs(self.out_cloud_dir)
-
-        # if (opts.plot_error is True) and (not os.path.exists(self.out_err_dir)): 
-        #     os.makedirs(self.out_err_dir)
-
-        # Use custom output directories if provided, otherwise use defaults
+        # Output directories
         if hasattr(opts, 'out_cloud_dir') and opts.out_cloud_dir:
             self.out_cloud_dir = opts.out_cloud_dir
         else:
@@ -64,17 +53,34 @@ class SFM(object):
         else:
             self.out_err_dir = os.path.join(opts.out_dir, opts.dataset, 'errors')
 
+        # Create output directories if they don't exist
+        os.makedirs(self.out_cloud_dir, exist_ok=True)
+        if not opts.skip_reprojection:
+            os.makedirs(self.out_err_dir, exist_ok=True)
+
         self.image_names = [x.split('.')[0] for x in sorted(os.listdir(self.images_dir)) \
                             if x.split('.')[-1] in opts.ext]
 
-        #setting up shared parameters for the pipeline
+        # setting up shared parameters for the pipeline
         self.image_data, self.matches_data, errors = {}, {}, {}
         self.matcher = getattr(cv2, opts.matcher)(crossCheck=opts.cross_check)
 
-        if opts.calibration_mat == 'benchmark': 
-            self.K = np.array([[2759.48,0,1520.69],[0,2764.16,1006.81],[0,0,1]])
+        # Handle intrinsic matrix
+        if opts.custom_intrinsics:
+            # Try to load intrinsics from calibration file
+            try:
+                calib_path = os.path.join(opts.data_dir, opts.dataset, 'calibration', 'intrinsics.npy')
+                self.K = np.load(calib_path)
+                print(f"Loaded custom intrinsics matrix: \n{self.K}")
+            except Exception as e:
+                print(f"Error loading custom intrinsics: {e}")
+                # Fallback to default
+                self.K = np.array([[1000.0, 0, 960.0], [0, 1000.0, 540.0], [0, 0, 1]])
+                print(f"Using fallback intrinsics: \n{self.K}")
+        elif opts.calibration_mat == 'benchmark': 
+            self.K = np.array([[2759.48, 0, 1520.69], [0, 2764.16, 1006.81], [0, 0, 1]])
         elif opts.calibration_mat == 'lg_g3': 
-            self.K = np.array([[3.97*320, 0, 320],[0, 3.97*320, 240],[0,0,1]])
+            self.K = np.array([[3.97*320, 0, 320], [0, 3.97*320, 240], [0, 0, 1]])
         else: 
             raise NotImplementedError
         
@@ -365,20 +371,21 @@ class SFM(object):
 
         views_done = 2 
 
-        #3d point cloud generation and reprojection error evaluation
+        # 3d point cloud generation
         self.ToPly(os.path.join(self.out_cloud_dir, 'cloud_{}_view.ply'.format(views_done)))
 
-        err1 = self._ComputeReprojectionError(name1)
-        err2 = self._ComputeReprojectionError(name2)
-        errors.append(err1)
-        errors.append(err2)
+        # Skip reprojection error for custom datasets
+        if not self.opts.skip_reprojection:
+            err1 = self._ComputeReprojectionError(name1)
+            err2 = self._ComputeReprojectionError(name2)
+            errors.append(err1)
+            errors.append(err2)
 
-        print('Camera {}: Reprojection Error = {}'.format(name1, err1))
-        print('Camera {}: Reprojection Error = {}'.format(name2, err2))
+            print('Camera {}: Reprojection Error = {}'.format(name1, err1))
+            print('Camera {}: Reprojection Error = {}'.format(name2, err2))
 
         for new_name in self.image_names[2:]: 
-
-            #new camera registration
+            # new camera registration
             t1 = time()
             self._NewViewPoseEstimation(new_name)
             t2 = time()
@@ -386,24 +393,31 @@ class SFM(object):
             total_time += this_time
             print('Camera {0}: Pose Estimation [time={1:.3}s]'.format(new_name, this_time))
 
-            #triangulation for new registered camera
+            # triangulation for new registered camera
             self._TriangulateNewView(new_name)
             t1 = time()
             this_time = t1-t2
             total_time += this_time
             print('Camera {0}: Triangulation [time={1:.3}s]'.format(new_name, this_time))
 
-            #3d point cloud update and error for new camera
+            # 3d point cloud update
             views_done += 1 
             self.ToPly(os.path.join(self.out_cloud_dir, 'cloud_{}_view.ply'.format(views_done)))
 
-            new_err = self._ComputeReprojectionError(new_name)
-            errors.append(new_err)
-            print('Camera {}: Reprojection Error = {}'.format(new_name, new_err))
+            # Skip reprojection error for custom datasets
+            if not self.opts.skip_reprojection:
+                new_err = self._ComputeReprojectionError(new_name)
+                errors.append(new_err)
+                print('Camera {}: Reprojection Error = {}'.format(new_name, new_err))
 
-        mean_error = sum(errors) / float(len(errors))
-        print('Reconstruction Completed: Mean Reprojection Error = {2} [t={0:.6}s], \
-                Results stored in {1}'.format(total_time, self.opts.out_dir, mean_error))
+        # Output final results
+        if not self.opts.skip_reprojection:
+            mean_error = sum(errors) / float(len(errors))
+            print('Reconstruction Completed: Mean Reprojection Error = {2} [t={0:.6}s], \
+                    Results stored in {1}'.format(total_time, self.opts.out_dir, mean_error))
+        else:
+            print('Reconstruction Completed: [t={0:.6}s], \
+                    Results stored in {1}'.format(total_time, self.opts.out_dir))
         
 
 def SetArguments(parser): 
@@ -465,6 +479,12 @@ def SetArguments(parser):
                         dest='feat_in_dir', help='custom directory to read feature files from')
     parser.add_argument('--matches_in_dir', action='store', type=str, default='',
                         dest='matches_in_dir', help='custom directory to read matches files from')
+    
+    # Add parameters for custom uploads
+    parser.add_argument('--custom_intrinsics', action='store', type=bool, default=False, 
+                        dest='custom_intrinsics', help='Use custom intrinsics matrix from calibration file')
+    parser.add_argument('--skip_reprojection', action='store', type=bool, default=False, 
+                        dest='skip_reprojection', help='Skip reprojection error calculation')
 
 def PostprocessArgs(opts): 
     opts.fund_method = getattr(cv2,opts.fund_method)

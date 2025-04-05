@@ -8,6 +8,9 @@ from pathlib import Path
 import shutil
 import tempfile
 import logging
+import uuid
+from PIL import Image
+import numpy as np
 IS_DEPLOYMENT = os.getenv('STREAMLIT_SHARING', '') or os.getenv('STREAMLIT_CLOUD', '')
 # Set page config
 st.set_page_config(
@@ -100,6 +103,17 @@ def main():
 def render_sfm_page():
     st.header("Structure from Motion")
     
+    # Add tabs for built-in datasets and custom uploads
+    tabs = st.tabs(["Built-in Datasets", "Upload Your Own Images"])
+    
+    with tabs[0]:
+        render_builtin_datasets()
+    
+    with tabs[1]:
+        render_custom_upload()
+
+# Extract the existing dataset rendering code
+def render_builtin_datasets():
     # Description
     st.markdown("""
     Structure from Motion (SFM) is a photogrammetric technique that estimates 
@@ -158,20 +172,112 @@ def render_sfm_page():
         matcher_type = st.selectbox("Feature Matcher", ["BFMatcher"], index=0)
         
     # Process button
-    if st.button("Run Reconstruction", type="primary"):
+    if st.button("Run Reconstruction", type="primary", key="run_builtin"):
         run_sfm_pipeline(dataset, feature_type, matcher_type)
 
-def run_sfm_pipeline(dataset, feature_type, matcher_type):
+# Add new function for custom image uploads
+def render_custom_upload():
+    st.markdown("""
+    ## Upload Your Own Images
+    
+    Upload multiple images to create a 3D reconstruction. You'll need to provide the 
+    intrinsic camera matrix parameters.
+    
+    **Note:** Since extrinsic parameters are unknown for your images, reprojection error 
+    cannot be calculated.
+    """)
+    
+    # Create a unique session ID for this upload to avoid conflicts
+    if 'upload_session_id' not in st.session_state:
+        st.session_state.upload_session_id = str(uuid.uuid4())
+    
+    session_id = st.session_state.upload_session_id
+    
+    # File uploaders
+    st.subheader("Upload Images")
+    uploaded_files = st.file_uploader("Choose multiple image files", accept_multiple_files=True, 
+                                     type=["jpg", "jpeg", "png"])
+    
+    # Check if we have at least 2 images
+    if uploaded_files and len(uploaded_files) < 2:
+        st.warning("Please upload at least 2 images for reconstruction.")
+    
+    # Display uploaded images
+    if uploaded_files:
+        st.subheader("Uploaded Images")
+        cols = st.columns(min(3, len(uploaded_files)))
+        for i, img_file in enumerate(uploaded_files[:3]):
+            cols[i % 3].image(img_file, caption=f"Image {i+1}")
+    
+    # Camera intrinsic matrix input
+    st.subheader("Camera Intrinsics")
+    st.info("Enter your camera's intrinsic matrix parameters. If unknown, you can use approximate values.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### Focal Length")
+        fx = st.number_input("fx (focal length in x direction)", 
+                            value=1000.0, step=10.0)
+        fy = st.number_input("fy (focal length in y direction)", 
+                            value=1000.0, step=10.0)
+    
+    with col2:
+        st.markdown("#### Principal Point")
+        cx = st.number_input("cx (principal point x coordinate)", 
+                            value=960.0, step=10.0)
+        cy = st.number_input("cy (principal point y coordinate)", 
+                            value=540.0, step=10.0)
+    
+    # Advanced options
+    st.subheader("Configuration")
+    with st.expander("Advanced Settings"):
+        feature_type = st.selectbox("Feature Detector", ["ORB", "SIFT"], index=0, key="custom_feature")
+        matcher_type = st.selectbox("Feature Matcher", ["BFMatcher"], index=0, key="custom_matcher")
+    
+    # Process button
+    if st.button("Run Reconstruction", type="primary", key="run_custom") and uploaded_files and len(uploaded_files) >= 2:
+        # Create custom dataset from uploads
+        custom_dataset_name = f"custom_{session_id}"
+        custom_dataset = create_custom_dataset(uploaded_files, custom_dataset_name, fx, fy, cx, cy)
+        
+        # Run the pipeline with the custom dataset
+        run_sfm_pipeline(custom_dataset, feature_type, matcher_type, custom_intrinsics=True)
+
+# Add function to create a custom dataset from uploads
+def create_custom_dataset(uploaded_files, dataset_name, fx, fy, cx, cy):
+    # Create dataset directory structure
+    dataset_dir = DATA_DIR / dataset_name
+    images_dir = dataset_dir / "images"
+    calibration_dir = dataset_dir / "calibration"
+    
+    os.makedirs(images_dir, exist_ok=True)
+    os.makedirs(calibration_dir, exist_ok=True)
+    
+    # Save uploaded images
+    for i, file in enumerate(uploaded_files):
+        img = Image.open(file)
+        img_path = images_dir / f"image_{i:03d}.jpg"
+        img.save(img_path)
+    
+    # Save intrinsic matrix
+    intrinsic_matrix = np.array([
+        [fx, 0, cx],
+        [0, fy, cy],
+        [0, 0, 1]
+    ])
+    
+    np.save(calibration_dir / "intrinsics.npy", intrinsic_matrix)
+    
+    return dataset_name
+
+# Update the run_sfm_pipeline function to handle custom datasets
+def run_sfm_pipeline(dataset, feature_type, matcher_type, custom_intrinsics=False):
     try:
         # Create dataset-specific directories
         dataset_dir = DATA_DIR / dataset
-        # Always define dataset_results_dir (this was missing)
         dataset_results_dir = RESULTS_DIR / dataset
         
-        # features_dir = dataset_dir / "features"
-        # matches_dir = dataset_dir / "matches"
-        
-        # Use different strategies for local vs deployment
         if IS_DEPLOYMENT:
             # In deployment: use temp directories
             dataset_results_dir = RESULTS_DIR / dataset
@@ -231,6 +337,7 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
         
         # Step 2: Run SFM
         status_text.text("Step 2/2: Performing 3D reconstruction...")
+        
         sfm_cmd = [
             sys.executable, 
             str(SFM_DIR / "script" / "sfm.py"),
@@ -238,12 +345,18 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type):
             f"--dataset={dataset}",
             f"--features={feature_type}",
             f"--matcher={matcher_type}",
-            f"--plot_error=True",
-            f"--feat_in_dir={str(features_dir)}",         # Add this line
+            f"--feat_in_dir={str(features_dir)}",
             f"--matches_in_dir={str(matches_dir)}", 
-            f"--out_cloud_dir={str(point_clouds_dir)}",  # Ensure your sfm.py accepts this parameter
-            f"--out_err_dir={str(errors_dir)}"           # Ensure your sfm.py accepts this parameter
+            f"--out_cloud_dir={str(point_clouds_dir)}",
+            f"--out_err_dir={str(errors_dir)}"
         ]
+        
+        # Add custom parameters for user-uploaded datasets
+        if custom_intrinsics:
+            sfm_cmd.append(f"--skip_reprojection=True")
+            sfm_cmd.append(f"--custom_intrinsics=True")
+        else:
+            sfm_cmd.append(f"--plot_error=True")
         
         logger.info(f"Running SFM command: {' '.join(sfm_cmd)}")
         result = subprocess.run(sfm_cmd, capture_output=True, text=True, env=env)
@@ -281,13 +394,12 @@ def display_results(dataset):
     final_cloud = cloud_files[-1]
     st.success(f"Successfully generated point cloud with {len(cloud_files)} views")
     
-    # Display reprojection errors
+    # Display reprojection errors only if they exist
     error_dir = RESULTS_DIR / dataset / "errors"
     if error_dir.exists():
-        st.subheader("Reprojection Errors")
         error_images = sorted(list(error_dir.glob("*.png")))
-        
         if error_images:
+            st.subheader("Reprojection Errors")
             cols = st.columns(min(3, len(error_images)))
             for i, img_path in enumerate(error_images[:3]):
                 cols[i % 3].image(str(img_path), caption=f"Error map {i+1}")
@@ -337,7 +449,7 @@ def display_results(dataset):
                 pass
         except Exception as e:
             st.error(f"Error creating zip file: {str(e)}")
-
+            
 def render_other_approaches():
     st.header("Other 3D Reconstruction Approaches")
     st.info("This section will contain other approaches to 3D reconstruction.")

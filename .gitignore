@@ -8,6 +8,7 @@ SFM/data/*/features/**
 
 # Python compiled files
 __pycache__/
+script/__pycache__/
 *.py[cod]
 *$py.class
 *.so

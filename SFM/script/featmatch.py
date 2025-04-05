@@ -97,7 +97,7 @@ def FeatMatch(opts, data_files=[]):
             kp, desc = feat.detectAndCompute(img, None)
         except Exception as e:
             print(f"Error with {opts.features}, falling back to ORB: {str(e)}")
-            feat = cv2.ORB_create()
+            feat = cv2.ORB_create(nfeatures=1000)
             kp, desc = feat.detectAndCompute(img, None)
 
         data.append((img_name, kp, desc))

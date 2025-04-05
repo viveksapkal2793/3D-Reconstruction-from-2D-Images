@@ -332,6 +332,11 @@ class SFM(object):
             return out 
 
         R, t, ref = self.image_data[name]
+        points_mask = ref > 0
+        if not np.any(points_mask):
+            print(f"Warning: No points to reproject for camera {name}")
+            return 0.0
+        
         reproj_pts = _ComputeReprojections(self.point_cloud[ref[ref>0].astype(int)], R, t, self.K)
 
         kp, desc = self._LoadFeatures(name)
@@ -340,14 +345,17 @@ class SFM(object):
         err = np.mean(np.sqrt(np.sum((img_pts-reproj_pts)**2,axis=-1)))
 
         if self.opts.plot_error: 
-            fig,ax = plt.subplots()
-            image = cv2.imread(os.path.join(self.images_dir, name+'.jpg'))[:,:,::-1]
-            ax = DrawCorrespondences(image, img_pts, reproj_pts, ax)
-            
-            ax.set_title('reprojection error = {}'.format(err))
+            try:
+                fig, ax = plt.subplots()
+                image = cv2.imread(os.path.join(self.images_dir, name+'.jpg'))[:,:,::-1]
+                ax = DrawCorrespondences(image, img_pts, reproj_pts, ax)
+                
+                ax.set_title(f'reprojection error = {err:.3f}')
 
-            fig.savefig(os.path.join(self.out_err_dir, '{}.png'.format(name)))
-            plt.close(fig)
+                fig.savefig(os.path.join(self.out_err_dir, '{}.png'.format(name)))
+                plt.close(fig)
+            except Exception as e:
+                print(f"Warning: Error plotting reprojection error for {name}: {e}")
             
         return err
         

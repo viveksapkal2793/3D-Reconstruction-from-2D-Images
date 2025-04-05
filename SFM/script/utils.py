@@ -151,14 +151,20 @@ def DrawCorrespondences(img, ptsTrue, ptsReproj, ax, drawOnly=50):
     ax: matplotlib axis object
     """
     ax.imshow(img)
-    
-    randidx = np.random.choice(ptsTrue.shape[0],size=(drawOnly,),replace=False)
-    ptsTrue_, ptsReproj_ = ptsTrue[randidx], ptsReproj[randidx]
-    
-    colors = colors=np.random.rand(drawOnly,3)
-    
-    ax.scatter(ptsTrue_[:,0],ptsTrue_[:,1],marker='x',c='r',linewidths=.1, label='Ground Truths')
-    ax.scatter(ptsReproj_[:,0],ptsReproj_[:,1],marker='x',c='b',linewidths=.1, label='Reprojected')
-    ax.legend()
 
+    # Choose the minimum between the number of points and drawOnly
+    num_points = min(ptsTrue.shape[0], drawOnly)
+    
+    if num_points > 0:
+        randidx = np.random.choice(ptsTrue.shape[0], size=(num_points,), replace=False)
+        ptsTrue_, ptsReproj_ = ptsTrue[randidx], ptsReproj[randidx]
+        
+        ax.scatter(ptsTrue_[:,0], ptsTrue_[:,1], marker='x', c='r', linewidths=.1, label='Ground Truths')
+        ax.scatter(ptsReproj_[:,0], ptsReproj_[:,1], marker='x', c='b', linewidths=.1, label='Reprojected')
+        ax.legend()
+    else:
+        ax.text(0.5, 0.5, "No points to display", 
+                horizontalalignment='center', verticalalignment='center',
+                transform=ax.transAxes)
+    
     return ax

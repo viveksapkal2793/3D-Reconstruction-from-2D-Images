@@ -246,15 +246,15 @@ def render_custom_upload():
 
 # Add function to create a custom dataset from uploads
 def create_custom_dataset(uploaded_files, dataset_name, fx, fy, cx, cy):
-    # Create dataset directory structure
-    dataset_dir = DATA_DIR / dataset_name
+    # Create dataset directory structure in TEMP_DIR instead of DATA_DIR
+    dataset_dir = TEMP_DIR / "data" / dataset_name
     images_dir = dataset_dir / "images"
     calibration_dir = dataset_dir / "calibration"
     
     os.makedirs(images_dir, exist_ok=True)
     os.makedirs(calibration_dir, exist_ok=True)
     
-    # Save uploaded images
+    # Save uploaded images to temporary location
     for i, file in enumerate(uploaded_files):
         img = Image.open(file)
         img_path = images_dir / f"image_{i:03d}.jpg"
@@ -274,12 +274,19 @@ def create_custom_dataset(uploaded_files, dataset_name, fx, fy, cx, cy):
 # Update the run_sfm_pipeline function to handle custom datasets
 def run_sfm_pipeline(dataset, feature_type, matcher_type, custom_intrinsics=False):
     try:
+        # Check if dataset is a custom one (uses temporary directory)
+        is_custom = dataset.startswith("custom_")
+        
         # Create dataset-specific directories
-        dataset_dir = DATA_DIR / dataset
+        if is_custom:
+            dataset_dir = TEMP_DIR / "data" / dataset
+        else:
+            dataset_dir = DATA_DIR / dataset
+            
         dataset_results_dir = RESULTS_DIR / dataset
         
-        if IS_DEPLOYMENT:
-            # In deployment: use temp directories
+        if IS_DEPLOYMENT or is_custom:
+            # In deployment or custom uploads: use temp directories
             dataset_results_dir = RESULTS_DIR / dataset
             features_dir = dataset_results_dir / "features" / feature_type
             matches_dir = dataset_results_dir / "matches" / matcher_type
@@ -338,10 +345,16 @@ def run_sfm_pipeline(dataset, feature_type, matcher_type, custom_intrinsics=Fals
         # Step 2: Run SFM
         status_text.text("Step 2/2: Performing 3D reconstruction...")
         
+        # Determine the data_dir to use for SFM based on whether it's a custom dataset
+        if is_custom:
+            sfm_data_dir = TEMP_DIR / "data"
+        else:
+            sfm_data_dir = DATA_DIR
+        
         sfm_cmd = [
             sys.executable, 
             str(SFM_DIR / "script" / "sfm.py"),
-            f"--data_dir={str(DATA_DIR)}",
+            f"--data_dir={str(sfm_data_dir)}",
             f"--dataset={dataset}",
             f"--features={feature_type}",
             f"--matcher={matcher_type}",
@@ -449,7 +462,7 @@ def display_results(dataset):
                 pass
         except Exception as e:
             st.error(f"Error creating zip file: {str(e)}")
-            
+
 def render_other_approaches():
     st.header("Other 3D Reconstruction Approaches")
     st.info("This section will contain other approaches to 3D reconstruction.")
@@ -458,10 +471,20 @@ def render_other_approaches():
 # Cleanup function for temp files
 def cleanup():
     try:
+        # Remove the entire temporary directory including all uploaded data
         if os.path.exists(TEMP_DIR):
+            logger.info(f"Cleaning up temporary directory: {TEMP_DIR}")
             shutil.rmtree(TEMP_DIR)
+            
+        # Clean up any custom datasets that might have been created in DATA_DIR
+        for item in os.listdir(DATA_DIR):
+            if item.startswith("custom_"):
+                custom_dir = DATA_DIR / item
+                if os.path.exists(custom_dir):
+                    logger.info(f"Cleaning up custom dataset: {custom_dir}")
+                    shutil.rmtree(custom_dir)
     except Exception as e:
-        logger.error(f"Error cleaning up temp directory: {e}")
+        logger.error(f"Error cleaning up temporary files: {e}")
 
 if __name__ == "__main__":
     try:

@@ -120,6 +120,21 @@ class SFM(object):
         return matches
 
     def _GetAlignedMatches(self,kp1,desc1,kp2,desc2,matches):
+
+        # Ensure matches indices are within the keypoint arrays bounds
+        valid_matches = []
+        for m in matches:
+            if m.queryIdx < len(kp1) and m.trainIdx < len(kp2):
+                valid_matches.append(m)
+            else:
+                print(f"Skipping match with invalid indices: queryIdx={m.queryIdx}, trainIdx={m.trainIdx}, kp1_len={len(kp1)}, kp2_len={len(kp2)}")
+        
+        if len(valid_matches) < len(matches):
+            print(f"Filtered out {len(matches) - len(valid_matches)} invalid matches out of {len(matches)} total")
+        
+        if not valid_matches:
+            raise ValueError("No valid matches found between images")
+        
         img1idx = np.array([m.queryIdx for m in matches])
         img2idx = np.array([m.trainIdx for m in matches])
 

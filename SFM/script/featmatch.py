@@ -92,12 +92,15 @@ def FeatMatch(opts, data_files=[]):
                     # Then try direct creation (OpenCV 4.x)
                     feat = getattr(cv2, opts.features + '_create')()
             else:
-                # For algorithms like ORB, BRISK, etc.
-                feat = getattr(cv2, '{}_{}'.format(opts.features, 'create'))()
+                # For algorithms like ORB, BRISK, etc. with increased features for ORB
+                if opts.features == 'ORB':
+                    feat = cv2.ORB_create(nfeatures=10000)  # Increase from default 500
+                else:
+                    feat = getattr(cv2, '{}_{}'.format(opts.features, 'create'))()
             kp, desc = feat.detectAndCompute(img, None)
         except Exception as e:
             print(f"Error with {opts.features}, falling back to ORB: {str(e)}")
-            feat = cv2.ORB_create(nfeatures=1000)
+            feat = cv2.ORB_create(nfeatures=10000)
             kp, desc = feat.detectAndCompute(img, None)
 
         data.append((img_name, kp, desc))

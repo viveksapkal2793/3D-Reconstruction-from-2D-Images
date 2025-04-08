@@ -162,7 +162,7 @@ def main():
     st.sidebar.title("Navigation")
     approach = st.sidebar.selectbox(
         "Select Approach",
-        ["Structure from Motion (SFM)", "Other Approaches"]
+        ["Structure from Motion (SFM)", "Multi-View Stereo (MVS)"]
     )
 
     with st.sidebar.expander("Environment Info"):
@@ -572,9 +572,46 @@ def display_results(dataset):
             st.error(f"Error creating zip file: {str(e)}")
 
 def render_other_approaches():
-    st.header("Other 3D Reconstruction Approaches")
-    st.info("This section will contain other approaches to 3D reconstruction.")
-    # Placeholder for other approaches
+    st.header("Multi-View Stereo (MVS)")
+    
+    # Description
+    st.markdown("""
+    ## Multi-View Stereo 3D Reconstruction
+    
+    Multi-View Stereo (MVS) is an advanced 3D reconstruction technique that creates 
+    dense, detailed 3D models from multiple calibrated images.
+    
+    This approach is implemented in a separate Streamlit app for optimal performance.
+    """)
+    
+    # Add a prominent button to the external app
+    st.markdown("### Access the MVS Application")
+    
+    # Create a visually appealing button
+    st.markdown("""
+    <div style="text-align: center; margin: 20px 0;">
+        <a href="https://reconstruction-3d-from-2d.streamlit.app/" target="_blank" 
+            style="background-color: #FF4B4B; color: white; padding: 12px 24px; 
+            border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 16px;">
+            Open MVS Application in New Tab
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Alternative standard link as a fallback
+    st.markdown("If the button doesn't work, click this link: [MVS Application](https://reconstruction-3d-from-2d.streamlit.app/)")
+    
+    # Add some details about the MVS approach
+    st.subheader("About Multi-View Stereo")
+    st.markdown("""
+    Unlike Structure from Motion (SFM) which focuses on sparse reconstruction and camera pose estimation, 
+    Multi-View Stereo generates dense point clouds or complete mesh models of objects.
+    
+    The external application provides:
+    - Dense depth map generation from stereo pairs
+    - Point cloud visualization and export
+    - Support for Temple dataset with various camera configurations
+    """)
 
 # Cleanup function for temp files
 def cleanup():

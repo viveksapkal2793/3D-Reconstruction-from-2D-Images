@@ -1,140 +1,117 @@
-# Structure from Motion 
+# Structure from Motion (SfM)
 
-Structure from Motion (SFM) from scratch, using Numpy and OpenCV. 
+This repository implements a complete Structure from Motion (SfM) pipeline for reconstructing 3D structures from a sequence of 2D images. The process automatically estimates camera poses and creates a sparse 3D point cloud of the scene.
 
-![](results/misc-figs/fountain_p11.png)
+## Introduction
 
-In this repository, we provide
-* Self-reliant tutorial on SFM
-* SFM Python Script
-* Associated Booklet
+Structure from Motion is a photogrammetric technique that estimates three-dimensional structures from two-dimensional image sequences. The pipeline consists of two main stages:
 
-## 1. Getting Started
+1. **Feature Extraction and Matching**: Extract distinctive features from images and find correspondences between them
+2. **Camera Pose Estimation and Triangulation**: Estimate camera positions and orientations, then triangulate 3D points
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+## Required Packages
 
-### 1.1. Prerequisites
-
-To run tutorials, you need to have following libraries installed:
 ```
-Numpy >= 1.13.1
-OpenCV 3
-Meshlab
-```
-Furthermore, to run SFM python script, you also need: 
-```
-OpenCV Contrib
+opencv-contrib-python>=4.8.0
+numpy
+matplotlib
 ```
 
-### 1.2. Data 
-Please download the standard data benchmarks from [here](https://github.com/openMVG/SfM_quality_evaluation)
+For the full OpenCV features (including SIFT and SURF), install:
 
-After downloading, you should have the following directory structure 
+```bash
+pip install opencv-contrib-python
+```
+
+## Usage Instructions
+
+### Step 1: Feature Extraction and Matching
+
+First, run featmatch.py to extract features from images and compute matches between them:
+
+```bash
+python featmatch.py --data_dir <path_to_images_directory> --out_dir <output_directory> --features <SIFT|SURF|ORB> --matcher BFMatcher
+```
+
+#### Example:
+```bash
+python featmatch.py --data_dir ../data/castle-P19/images/ --out_dir ../data/castle-P19/ --features SIFT
+```
+
+#### Key Parameters:
+- `--data_dir`: Directory containing the images
+- `--out_dir`: Output directory for features and matches
+- `--features`: Feature algorithm (SIFT, SURF, ORB) - SIFT generally produces the best results
+- `--matcher`: Feature matching algorithm (BFMatcher, FlannBasedMatcher)
+- `--cross_check`: Enable/disable cross-checking of feature matches (default: True)
+
+### Step 2: Structure from Motion
+
+After extracting features, run the main SfM pipeline to reconstruct the 3D point cloud:
+
+```bash
+python sfm.py --data_dir <root_data_directory> --dataset <dataset_name> --features <SIFT|SURF|ORB> --matcher BFMatcher --out_dir <results_directory>
+```
+
+#### Example:
+```bash
+python sfm.py --data_dir ../data/ --dataset castle-P19 --features SIFT --matcher BFMatcher --out_dir ../results/ --plot_error True
+```
+
+#### Key Parameters:
+- `--data_dir`: Root directory containing dataset folders
+- `--dataset`: Name of the dataset folder
+- `--features`: Feature algorithm (should match what was used in featmatch.py)
+- `--matcher`: Matching algorithm (should match what was used in featmatch.py)
+- `--out_dir`: Directory to store results
+- `--calibration_mat`: Type of intrinsic camera matrix (benchmark or lg_g3)
+- `--plot_error`: Whether to create reprojection error visualizations
+
+#### Advanced Parameters:
+- `--fund_method`: Method for fundamental matrix estimation (default: FM_RANSAC)
+- `--outlier_thres`: Threshold for outlier rejection (default: 0.9)
+- `--pnp_method`: Method for PnP estimation (default: SOLVEPNP_DLS)
+- `--reprojection_thres`: Reprojection threshold for PnP (default: 8.0)
+
+## Dataset Structure
+
+The code expects datasets to be organized as follows:
 ```
 data/
-    fountain-P11/ 
-        images/
-            0001.jpg
-            ...
-            0011.jpg
-        gt_dense_cameras/
-            0000.jpg.camera
-            ...
-            0011.jpg.camera
-    Herz-Jesus-P8/
-        ...
-    Castle-P19/
-        ...
-    ...
+├── dataset_name/
+│   ├── images/
+│   │   ├── image1.jpg
+│   │   ├── image2.jpg
+│   │   └── ...
 ```
 
-## 2. Demo/Quick Start
+## Output
 
-### 2.1. Tutorial Notebook 
-Tutorials are in `tutorial/` directory. Furthermore, they're divided in following sections
-1. Chapter 1: Prerequisites
-2. Chapter 2: Epipolar Geometry
-3. Chapter 3: 3D Scene Estimations
-4. Chapter 4: Putting It Together: Part I
+The SfM pipeline generates:
+- A sparse 3D point cloud (in PLY format)
+- Reprojection error visualizations (if enabled)
+- Multiple point cloud files showing the progression as more views are added
 
-### 2.2. SFM Script
-1. Go to `script/` directory
-    ```
-    cd script
-    ```
+Results are saved to:
+```
+results/
+├── dataset_name/
+│   ├── point-clouds/
+│   │   ├── cloud_2_view.ply
+│   │   ├── cloud_3_view.ply
+│   │   └── ...
+│   ├── errors/
+│   │   ├── image1.png
+│   │   ├── image2.png
+│   │   └── ...
+```
 
-2. Run `featmatch.py` to generate feature keypoints, descriptors and matches
-    ```
-    python featmatch.py
-    ```
+## Supported Datasets
 
-    All arguments are shown below: 
-    ```
-    usage: featmatch.py [-h] [--data_dir DATA_DIR] [--ext EXT] [--out_dir OUT_DIR]
-                        [--features FEATURES] [--print_every PRINT_EVERY]
-                        [--save_results SAVE_RESULTS]
+The code has been tested with the following benchmark datasets:
+- fountain-P11
+- entry-P10
+- Herz-Jesus-P8/P25 
+- castle-P19
 
-    optional arguments:
-    -h, --help            show this help message and exit
-
-    --data_dir  directory containing images (default: ../data/fountain-P11/images/)
-    --ext   comma seperated string of allowed image extensions (default: jpg,png)
-    --out_dir   root directory to store results in (default: ../data/fountain-P11)
-
-    --features  [SIFT|SURF] Feature algorithm to use (default: SURF)
-    --matcher   [BFMatcher|FlannBasedMatcher] Matching algorithm to use (default: BFMatcher)
-    --cross_check   [True|False] Whether to cross check feature matching or not (default: True)
-
-    --print_every   [1,+inf] print progress every print_every seconds, -1 to disable (default: 1)
-    --save_results  [True|False] whether to save images with keypoints drawn on them (default: False)
-    ```
-
-3. Run `sfm.py` to generate point cloud: 
-    ```
-    python sfm.py --data-dir <path-to-data-directory>
-    ```
-
-    All arguments are shown below
-    ```
-    usage: sfm.py [-h] [--data_dir DATA_DIR] [--dataset DATASET] [--ext EXT]
-              [--out_dir OUT_DIR] [--features FEATURES] [--matcher MATCHER]
-              [--cross_check CROSS_CHECK] [--calibration_mat CALIBRATION_MAT]
-              [--fund_method FUND_METHOD] [--outlier_thres OUTLIER_THRES]
-              [--fund_prob FUND_PROB] [--pnp_method PNP_METHOD]
-              [--pnp_prob PNP_PROB] [--allow_duplicates ALLOW_DUPLICATES]
-              [--color_policy COLOR_POLICY] [--plot_error PLOT_ERROR]
-              [--verbose VERBOSE]
-
-    optional arguments:
-    -h, --help            show this help message and exit
-    
-    --data_dir  root directory containing input data (default: ../data/)
-    --dataset   name of dataset (default: fountain-P11)
-    --ext   comma seperated string of allowed image extensions (default: jpg,png)
-    --out_dir   root directory to store results in (default: ../results/)
-
-    --features  [SIFT|SURF] Feature algorithm to use (default: SURF)
-    --matcher   [BFMatcher|FlannBasedMatcher] Matching algorithm to use (default: BFMatcher)
-    --calibration_mat   [benchmark|lg_g3] Type of intrinsic camera to use (default: benchmark)
-    
-    --fund_method   [FM_RANSAC | FM_8POINT] Method to estimate fundamental matrix (default: FM_RANSAC)
-    --outlier_thres     Threshold value of outlier to be used in fundamental matrix estimation (default: 0.9)
-    --fund_prob     [0, 1] Confidence in fundamental matrix estimation required(default: 0.9)
-
-    --pnp_method    [SOLVEPNP_DLS | SOLVEPNP_EPNP | ...] Method used for PnP estimation (default: SOLVEPNP_DLS)
-    --pnp_prob  [0, 1] Confidence in PnP estimation required (default: 0.99)
-    ```
-
-## 3. Results
-### 3.1. Fountain P11
-![](results/misc-figs/fountain_p11.png)
-
-### 3.2. Herz Jesus P8
-![](results/misc-figs/herz_jesus_p8.png)
-
-### 3.3. Entry P10
-![](results/misc-figs/entry_p10.png)
-
-## Authors
-* [Muneeb Aadil](https://muneebaadil.github.io)
-* [Sibt ul Hussain](https://sites.google.com/site/sibtulhussain/)
+These datasets have known camera calibration parameters using the "benchmark" calibration matrix.

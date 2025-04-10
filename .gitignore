@@ -41,6 +41,10 @@ SFM/data/*/images/
 !SFM/data/*/images/*.jpg
 !SFM/data/*/images/*.png
 !assets/sample_outputs/*/*.png
+!samples/*.png
+!samples/*.jpg
+!samples/**/*.png
+!samples/**/*.jpg
 
 # System files
 .DS_Store
